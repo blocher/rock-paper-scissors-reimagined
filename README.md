@@ -108,6 +108,79 @@ Choose an alternative if any of the following become priorities:
 - Device test matrix: recent iOS/Android mid-range; Safari/Chrome/Firefox
 - CI: lint, type-check, unit tests on PR; preview deploys for web
 
+## Variant build plan (single‑player v1)
+
+### Shared systems
+- Rules engine: `src/rules/engine.ts` with a pluggable `Adjudicator` interface and `ModeConfig` describing gestures, win logic, rounds, and toggles.
+- AI opponents: `src/ai/` with strategies `Random`, `Adaptive` (counters last‑N tendencies), `Cheeky` (small peek/advantage). Selectable per mode.
+- UI/Scenes: `MainMenu` → `Gameplay` → `Results`, with per‑mode HUD toggles (property‑of‑round, explanations, streaks).
+- Settings: `src/config/features.ts` for feature flags; persisted in `localStorage` key `rpsr.settings.v1`.
+
+### Modes to implement
+- Classic Throw (Normal)
+  - Gestures: Rock, Paper, Scissors. Standard relationships.
+  - Option: Streak bonus toggle (e.g., +1 on 3+ consecutive wins).
+
+- Spock Expansion (RPSLS)
+  - Gestures: Rock, Paper, Scissors, Lizard, Spock. Standard relationships.
+  - Option: "Explain the win" toggle showing the specific reason each round.
+
+- Metal Mayhem (curated metals)
+  - Predefined list in `data/metals.json` (e.g., Aluminum, Iron, Copper, Gold, Silver, Platinum, Titanium, Tungsten, Nickel, Zinc, Lead, Tin, Chromium, Cobalt, Magnesium, Lithium, Sodium, Calcium).
+  - Round property pool: `hardness_mohs` (max), `melting_C` (max), `density_gcc` (max), `conductivity_MS_m` (max), `reactivity_rank` (min), `corrosion_resistance` (max).
+  - Default: pre‑announce property‑of‑the‑round; tie → evaluate a secondary random property.
+  - Option: Risk round (hide property until after selection).
+  - Data shape example:
+
+    ```json
+    {
+      "metals": [
+        { "name": "Tungsten", "hardness_mohs": 7.5, "melting_C": 3422, "density_gcc": 19.25, "conductivity_MS_m": 18.2, "reactivity_rank": 15, "corrosion_resistance": 8 }
+      ],
+      "properties": {
+        "hardness_mohs": { "direction": "max" },
+        "melting_C": { "direction": "max" },
+        "density_gcc": { "direction": "max" },
+        "conductivity_MS_m": { "direction": "max" },
+        "reactivity_rank": { "direction": "min" },
+        "corrosion_resistance": { "direction": "max" }
+      }
+    }
+    ```
+
+- OmniThrow (Anything mode)
+  - Curated vs Freestyle selector.
+  - Algorithmic adjudicator (default, no AI): `src/rules/adjudicators/ontology.ts` uses tags for entries and a weight matrix `W[tagA][tagB]` to compute a score; highest‑impact tag pair forms the explanation.
+  - Optional AI fallback (configurable): if tags are sparse or score ≈ 0, call an adapter and cache the verdict/tags for consistency. Safety filters for inputs.
+  - Tag data and mappings in `data/ontology/`.
+
+- Overrule (special mode with I Win / Reverse)
+  - Adds special throws: `I Win` (beats everything) and `Reverse` (beats `I Win`; ties with itself; normal behavior vs standard gestures).
+  - Balance: each side gets 1 `I Win` and 1 `Reverse` per match by default; optional cooldowns; optional "no I Win on match point" toggle.
+
+### Optional add‑ons (cross‑mode)
+- Difficulty flavors: Random, Adaptive, Cheeky.
+- Streak bonus (off by default except Classic).
+- Explain‑the‑win captions (RPSLS on; others optional).
+- Risk round (Metal Mayhem).
+- Accessibility: color‑blind palettes, reduced motion.
+
+### Testing plan (rules‑first)
+- Deterministic adjudication unit tests per mode:
+  - Classic/RPSLS: full matchup matrices.
+  - Metal Mayhem: property comparisons, tie‑break cascade, hidden property reveal.
+  - OmniThrow: tag matrix samples, low‑score fallback behavior; AI path is mocked.
+  - Overrule: `I Win` > all, `Reverse` > `I Win`, ties for identical specials, normal interactions otherwise.
+- Seeded RNG for AI choices to ensure reproducible tests.
+
+### Milestones
+1. Scaffold repo (Vite + Phaser + TS), scene shell, feature flags, seeded RNG.
+2. Implement Classic + RPSLS with explanations, unit tests.
+3. Add Metal Mayhem with `data/metals.json`, risk/announce toggles, tests.
+4. Implement OmniThrow (algorithmic), seed `data/ontology/` and weight matrix, tests.
+5. Add Overrule mode, charges UI, tests.
+6. Polish: juice (particles/haptics), settings persistence, basic analytics; prepare mobile wrapper.
+
 ## Build & release plan
 - Web: build with Vite; host on static hosting (e.g., GitHub Pages, Netlify, Vercel)
 - Mobile: add Capacitor when ready; `sync` native projects; store submissions
