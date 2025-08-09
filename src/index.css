@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand: 30 100% 50%;
+  }
+  html, body, #root {
+    height: 100%;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-slate-700/60 shadow-xl;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl px-4 py-3 font-semibold transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white hover:from-indigo-400 hover:to-pink-400;
+  }
+  .btn-ghost {
+    @apply btn bg-transparent hover:bg-slate-200/60 dark:hover:bg-slate-800/60;
+  }
+}
